@@ -1,1 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tap the Animal — Android Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* ===== OUTER PAGE (desktop wrapper) ===== */
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background: linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-family:'Nunito',sans-serif;
+  padding:20px;
+}
+
+/* ===== ANDROID PHONE SHELL ===== */
+.phone-shell{
+  width:393px;
+  height:852px;
+  background:#111;
+  border-radius:50px;
+  box-shadow:
+    0 0 0 2px #444,
+    0 0 0 4px #222,
+    0 30px 80px rgba(0,0,0,0.8),
+    inset 0 0 0 2px #333;
+  position:relative;
+  overflow:hidden;
+  flex-shrink:0;
+}
+
+/* Side buttons */
+.phone-shell::before{
+  content:'';
+  position:absolute;
+  left:-5px; top:120px;
+  width:4px; height:32px;
+  background:#333;
+  border-radius:3px 0 0 3px;
+  box-shadow: 0 48px 0 #333, 0 90px 0 #333;
+}
+.phone-shell::after{
+  content:'';
+  position:absolute;
+  right:-5px; top:150px;
+  width:4px; height:60px;
+  background:#333;
+  border-radius:0 3px 3px 0;
+}
+
+/* Dynamic island */
+.dynamic-island{
+  position:absolute;
+  top:14px;
+  left:50%;
+  transform:translateX(-50%);
+  width:120px;
+  height:34px;
+  background:#000;
+  border-radius:20px;
+  z-index:9999;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+}
+.di-camera{width:12px;height:12px;background:#1a1a1a;border-radius:50%;border:2px solid #2a2a2a;}
+.di-sensor{width:8px;height:8px;background:#1a1a1a;border-radius:50%;border:1px solid #333;}
+
+/* Screen area */
+.phone-screen{
+  position:absolute;
+  inset:0;
+  border-radius:48px;
+  overflow:hidden;
+}
+
+/* ===== MUSIC CONTROL PILL ===== */
+.music-pill{
+  position:absolute;
+  bottom:18px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:10000;
+  background:rgba(0,0,0,0.75);
+  backdrop-filter:blur(10px);
+  border-radius:50px;
+  padding:8px 18px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  box-shadow:0 4px 20px rgba(0,0,0,0.4);
+  border:1px solid rgba(255,255,255,0.1);
+  cursor:pointer;
+  user-select:none;
+  white-space:nowrap;
+}
+.music-pill:active{transform:translateX(-50%) scale(0.97);}
+.music-note{font-size:1rem;animation:bounce-note 1s ease-in-out infinite;}
+@keyframes bounce-note{0%,100%{transform:translateY(0) rotate(-5deg);}50%{transform:translateY(-3px) rotate(5deg);}}
+.music-label{color:white;font-size:0.7rem;font-weight:800;letter-spacing:0.5px;}
+.music-toggle{
+  background:linear-gradient(135deg,#4CAF50,#8BC34A);
+  border:none;
+  border-radius:50%;
+  width:26px;height:26px;
+  font-size:0.8rem;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  color:white;
+  transition:transform .1s;
+}
+.music-toggle:active{transform:scale(0.9);}
+.vol-slider{
+  -webkit-appearance:none;
+  width:70px;height:4px;
+  background:rgba(255,255,255,0.3);
+  border-radius:2px;
+  outline:none;
+  cursor:pointer;
+}
+.vol-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;
+  width:14px;height:14px;
+  background:white;
+  border-radius:50%;
+  cursor:pointer;
+}
+
+/* ===== APP IFRAME ===== */
+.app-iframe{
+  width:100%;
+  height:100%;
+  border:none;
+  display:block;
+}
+
+/* ===== INLINE APP STYLES (inside phone) ===== */
+/* All original app styles scoped inside .app-root */
+</style>
+</head>
+<body>
+
+<!-- PHONE SHELL -->
+<div class="phone-shell">
+
+  <!-- Dynamic Island -->
+  <div class="dynamic-island">
+    <div class="di-sensor"></div>
+    <div class="di-camera"></div>
+    <div class="di-sensor"></div>
+  </div>
+
+  <!-- PHONE SCREEN — app runs directly inside -->
+  <div class="phone-screen" id="phone-screen">
+
+    <!-- ==================== APP CONTENT ==================== -->
+    <div id="app-root" style="width:100%;height:100%;overflow:hidden;position:relative;">
+
+      <!-- TOAST -->
+      <div class="toast" id="toast"></div>
+
+      <!-- ==================== SPLASH SCREEN ==================== -->
+      <div class="screen active" id="screen-splash">
+        <div class="bg"><div class="sky"></div></div>
+        <div class="sun"></div>
+        <div class="cloud cl1"></div>
+        <div class="cloud cl2"></div>
+        <div class="deco-animal" style="left:8%;bottom:28%;animation-delay:0s;">🐘</div>
+        <div class="deco-animal" style="right:6%;bottom:26%;animation-delay:1s;">🦁</div>
+        <div class="deco-animal" style="left:16%;bottom:18%;animation-delay:0.5s;font-size:2.5rem;">🐥</div>
+        <div class="ground"><div class="flowers">🌸 🌻 🌺 🌼 🌷 🌸 🌻</div></div>
+        <div class="logo-wrap" style="z-index:10;text-align:center;">
+          <div class="logo-animals">🐶 🐱 🦁</div>
+          <div class="logo-title">Tap the</div>
+          <div class="logo-title" style="color:#FF6B35;">Animal</div>
+          <div style="font-size:0.85rem;font-weight:800;color:#5C6BC0;margin-top:6px;">SDG 4 — Quality Education</div>
+        </div>
+        <button class="btn btn-play" style="width:200px;font-size:1.5rem;margin-top:24px;z-index:10;" onclick="goTo('screen-menu');startBGMusic()">
+          🎮 Tap to Start!
+        </button>
+        <div class="sdg-footer"><span class="sdg-pill">🌍 West Visayas State University · CIT 238</span></div>
+      </div>
+
+      <!-- ==================== MAIN MENU ==================== -->
+      <div class="screen" id="screen-menu">
+        <div class="bg"><div class="sky"></div></div>
+        <div class="sun"></div>
+        <div class="cloud cl1"></div>
+        <div class="ground"></div>
+        <div class="card" style="z-index:10;">
+          <div style="text-align:center;margin-bottom:18px;">
+            <div style="font-size:2rem;">🐶🐱🦁🐮</div>
+            <div style="font-family:'Fredoka One',cursive;font-size:1.8rem;color:#1B5E20;">Tap the Animal</div>
+          </div>
+          <button class="btn btn-play" onclick="goTo('screen-levelselect')"><span class="btn-icon">▶</span> Play</button>
+          <button class="btn btn-sounds" onclick="goTo('screen-sounds')"><span class="btn-icon">🎵</span> Animal Sounds</button>
+          <button class="btn btn-learn" onclick="goTo('screen-learn')"><span class="btn-icon">📖</span> Learning Mode</button>
+          <button class="btn btn-settings" onclick="goTo('screen-howto')"><span class="btn-icon">❓</span> How to Play</button>
+        </div>
+        <div class="sdg-footer"><span class="sdg-pill">🌍 SDG 4: Quality Education</span></div>
+      </div>
+
+      <!-- ==================== HOW TO PLAY ==================== -->
+      <div class="screen" id="screen-howto">
+        <div class="bg"><div class="sky"></div></div>
+        <div class="ground"></div>
+        <div class="card" style="z-index:10;max-height:90vh;overflow-y:auto;">
+          <div style="font-family:'Fredoka One',cursive;font-size:1.8rem;color:#1B5E20;text-align:center;margin-bottom:16px;">How to Play 🎮</div>
+          <div class="howto-step"><div class="howto-num">1</div><div class="howto-text">🔊 Listen to the animal sound carefully!</div></div>
+          <div class="howto-step"><div class="howto-num">2</div><div class="howto-text">🐾 Tap the correct animal on screen!</div></div>
+          <div class="howto-step"><div class="howto-num">3</div><div class="howto-text">⏱️ Answer fast — the timer is counting!</div></div>
+          <div class="howto-step"><div class="howto-num">4</div><div class="howto-text">🏆 Score points and earn your grade!</div></div>
+          <div style="background:#E8F5E9;border-radius:16px;padding:14px;margin:14px 0;text-align:center;">
+            <div style="font-family:'Fredoka One',cursive;font-size:1rem;color:#2E7D32;">Great Job! = A+ grade</div>
+            <div style="font-size:0.8rem;color:#555;font-weight:700;margin-top:4px;">Supporting SDG 4 — Quality Education</div>
+          </div>
+          <div style="font-size:1.6rem;text-align:center;margin:10px 0;">🐒 🐼 🐨 🦊</div>
+          <button class="btn btn-green" onclick="goTo('screen-menu')">← Back to Menu</button>
+        </div>
+      </div>
+
+      <!-- ==================== LEVEL SELECT ==================== -->
+      <div class="screen" id="screen-levelselect">
+        <div class="bg"><div class="sky"></div></div>
+        <div class="ground"></div>
+        <div class="card" style="z-index:10;">
+          <div style="font-family:'Fredoka One',cursive;font-size:1.8rem;color:#1B5E20;text-align:center;margin-bottom:6px;">Choose Level 🎯</div>
+          <div style="font-size:0.85rem;font-weight:700;color:#888;text-align:center;margin-bottom:16px;">Choose your level!</div>
+          <div class="level-card" onclick="startGame('easy')">
+            <div class="level-animal">🐥</div>
+            <div class="level-info"><h3>Easy Level</h3><p>Simple &amp; Fun · 30 seconds</p></div>
+            <div class="level-badge">⭐ Easy</div>
+          </div>
+          <div class="level-card" onclick="startGame('medium')">
+            <div class="level-animal">🦊</div>
+            <div class="level-info"><h3>Advanced Level</h3><p>Challenging! · 20 seconds</p></div>
+            <div class="level-badge">⭐⭐ Hard</div>
+          </div>
+          <div class="level-card" onclick="startGame('expert')">
+            <div class="level-animal">🦁</div>
+            <div class="level-info"><h3>Expert Level</h3><p>Speed Master · 15 seconds</p></div>
+            <div class="level-badge">⭐⭐⭐ Pro</div>
+          </div>
+          <button class="btn btn-back" onclick="goTo('screen-menu')" style="width:100%;margin-top:4px;">← Back</button>
+        </div>
+      </div>
+
+      <!-- ==================== GAME SCREEN ==================== -->
+      <div class="screen" id="screen-game" style="justify-content:flex-start;background:#87CEEB;">
+        <div class="bg"><div class="sky"></div></div>
+        <div class="cloud cl1"></div>
+        <div class="game-top">
+          <div class="hud-box">
+            <div class="hud-icon">🏆</div>
+            <div class="hud-val" id="hud-score">0</div>
+            <div class="hud-lbl">Score</div>
+          </div>
+          <div class="timer-ring">
+            <svg class="timer-svg" viewBox="0 0 60 60">
+              <circle class="timer-track" cx="30" cy="30" r="25"/>
+              <circle class="timer-fill" id="timer-ring" cx="30" cy="30" r="25"/>
+            </svg>
+            <div class="timer-text" id="hud-time">30</div>
+          </div>
+          <div class="hud-box">
+            <div class="hud-icon">🐾</div>
+            <div class="hud-val" id="hud-tapped">0</div>
+            <div class="hud-lbl">Tapped</div>
+          </div>
+        </div>
+        <div class="question-bubble">
+          <span class="question-text" id="question-text">🔊 Which animal makes this sound?</span>
+          <button class="speaker-btn" onclick="replaySound()" title="Play sound">🔊</button>
+        </div>
+        <div class="animal-grid" id="animal-grid"></div>
+        <div style="position:absolute;bottom:0;width:100%;height:60px;background:linear-gradient(180deg,#66BB6A,#388E3C);z-index:5;border-radius:30px 30px 0 0;display:flex;align-items:center;justify-content:space-around;font-size:1.5rem;padding:0 10px;">
+          🌸🌻🌼🌺🌸🌻🌼
+        </div>
+      </div>
+
+      <!-- ==================== RESULTS SCREEN ==================== -->
+      <div class="screen" id="screen-results">
+        <div class="bg"><div class="sky"></div></div>
+        <div class="ground"></div>
+        <div class="card" style="z-index:10;text-align:center;">
+          <div id="result-emoji" style="font-size:4rem;animation:bounceIn .5s;">🎉</div>
+          <div style="font-family:'Fredoka One',cursive;font-size:1.8rem;color:#1B5E20;" id="result-title">GREAT JOB!</div>
+          <div class="result-grade" id="result-grade">A+</div>
+          <div class="stars-big" id="result-stars">⭐⭐⭐</div>
+          <div style="background:#F9FBE7;border-radius:18px;padding:14px;margin:12px 0;">
+            <div class="result-stat"><span class="stat-label">Score</span><span class="stat-val" id="res-score">0</span></div>
+            <div class="result-stat"><span class="stat-label">Animals Tapped</span><span class="stat-val" id="res-tapped">0</span></div>
+            <div class="result-stat"><span class="stat-label">Accuracy</span><span class="stat-val" id="res-acc">0%</span></div>
+          </div>
+          <div style="background:#E3F2FD;border-radius:14px;padding:10px;margin-bottom:14px;font-size:0.8rem;font-weight:700;color:#0D47A1;">
+            🌍 You supported SDG 4 — Quality Education!<br>Keep learning &amp; growing!
+          </div>
+          <button class="btn btn-green" onclick="restartGame()">🔄 Play Again</button>
+          <button class="btn btn-orange" onclick="goTo('screen-menu')" style="margin-bottom:0;">🏠 Main Menu</button>
+        </div>
+      </div>
+
+      <!-- ==================== ANIMAL SOUNDS ==================== -->
+      <div class="screen" id="screen-sounds" style="justify-content:flex-start;padding-top:16px;">
+        <div class="bg"><div class="sky"></div></div>
+        <div class="card" style="z-index:10;margin-top:10px;width:min(380px,92vw);">
+          <div style="font-family:'Fredoka One',cursive;font-size:1.8rem;color:#1B5E20;text-align:center;margin-bottom:4px;">Animal Sounds 🎵</div>
+          <div style="font-size:0.8rem;color:#888;font-weight:700;text-align:center;margin-bottom:12px;">Tap the speaker to hear!</div>
+          <div class="scroll-area" id="sounds-list"></div>
+          <button class="btn btn-back" onclick="goTo('screen-menu')" style="width:100%;margin-top:12px;">← Back</button>
+        </div>
+      </div>
+
+      <!-- ==================== LEARNING MODE ==================== -->
+      <div class="screen" id="screen-learn" style="justify-content:flex-start;padding-top:16px;">
+        <div class="bg"><div class="sky"></div></div>
+        <div class="card" style="z-index:10;margin-top:10px;width:min(380px,92vw);">
+          <div style="font-family:'Fredoka One',cursive;font-size:1.8rem;color:#1B5E20;text-align:center;margin-bottom:4px;">Learning Mode 📖</div>
+          <div style="font-size:0.8rem;color:#888;font-weight:700;text-align:center;margin-bottom:12px;">Tap an animal to learn more!</div>
+          <div class="scroll-area" id="learn-list"></div>
+          <button class="btn btn-back" onclick="goTo('screen-menu')" style="width:100%;margin-top:12px;">← Back</button>
+        </div>
+      </div>
+
+    </div><!-- end app-root -->
+  </div><!-- end phone-screen -->
+
+  <!-- MUSIC CONTROL PILL (inside phone, bottom) -->
+  <div class="music-pill" id="music-pill" style="display:none;">
+    <span class="music-note" id="music-note">🎵</span>
+    <span class="music-label">BG Music</span>
+    <button class="music-toggle" id="music-btn" onclick="toggleBGMusic()">⏸</button>
+    <input type="range" class="vol-slider" id="vol-slider" min="0" max="100" value="40" oninput="setBGVolume(this.value)">
+  </div>
+
+</div><!-- end phone-shell -->
+
+<!-- ==================== STYLES ==================== -->
+<style>
+/* Scope all app styles inside phone-screen */
+#app-root *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+#app-root{font-family:'Nunito',sans-serif;background:#87CEEB;overflow:hidden;touch-action:manipulation;}
+
+.screen{display:none;width:100%;height:100%;flex-direction:column;align-items:center;justify-content:center;position:absolute;inset:0;overflow:hidden;}
+.screen.active{display:flex;}
+
+.bg{position:absolute;inset:0;z-index:0;}
+.sky{background:linear-gradient(180deg,#87CEEB 0%,#B3E5FC 60%,#C8E6C9 80%,#81C784 100%);width:100%;height:100%;}
+
+.sun{position:absolute;top:50px;right:40px;width:60px;height:60px;background:#FFD700;border-radius:50%;box-shadow:0 0 0 10px rgba(255,215,0,0.2),0 0 0 20px rgba(255,215,0,0.1);animation:spin 20s linear infinite;z-index:2;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.cloud{position:absolute;background:white;border-radius:50px;opacity:0.9;z-index:2;}
+.cloud::before,.cloud::after{content:'';position:absolute;background:white;border-radius:50%;}
+.cl1{width:90px;height:30px;top:14%;left:6%;animation:drift 22s linear infinite;}
+.cl1::before{width:44px;height:44px;top:-22px;left:10px;}
+.cl1::after{width:30px;height:30px;top:-16px;left:42px;}
+.cl2{width:70px;height:24px;top:24%;right:8%;animation:drift 28s linear infinite 8s;}
+.cl2::before{width:36px;height:36px;top:-18px;left:8px;}
+.cl2::after{width:24px;height:24px;top:-12px;left:32px;}
+@keyframes drift{0%{transform:translateX(0)}50%{transform:translateX(25px)}100%{transform:translateX(0)}}
+
+.hills{position:absolute;bottom:0;left:0;right:0;z-index:1;}
+.deco-animal{position:absolute;font-size:3rem;animation:float 3s ease-in-out infinite;z-index:3;}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+
+.card{background:rgba(255,255,255,0.95);border-radius:28px;padding:22px 18px;box-shadow:0 12px 40px rgba(0,0,0,0.18);position:relative;z-index:10;width:min(340px,88vw);}
+
+.logo-wrap{z-index:10;text-align:center;margin-bottom:14px;}
+.logo-title{font-family:'Fredoka One',cursive;font-size:clamp(2.4rem,8vw,3.4rem);color:#1B5E20;text-shadow:3px 3px 0 #A5D6A7,5px 5px 0 rgba(0,0,0,0.1);letter-spacing:1px;line-height:1;}
+.logo-sub{font-family:'Fredoka One',cursive;font-size:clamp(1.2rem,4vw,1.8rem);color:#FF6B35;text-shadow:2px 2px 0 rgba(0,0,0,0.1);}
+.logo-animals{font-size:2.4rem;margin:6px 0;letter-spacing:4px;}
+
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:13px 18px;border-radius:50px;border:none;font-family:'Fredoka One',cursive;font-size:1.15rem;cursor:pointer;margin-bottom:10px;transition:transform .15s,box-shadow .15s;box-shadow:0 5px 0 rgba(0,0,0,0.2);}
+.btn:active{transform:translateY(4px);box-shadow:0 1px 0 rgba(0,0,0,0.2);}
+.btn-play{background:linear-gradient(135deg,#4CAF50,#8BC34A);color:white;}
+.btn-sounds{background:linear-gradient(135deg,#FF9800,#FFC107);color:white;}
+.btn-learn{background:linear-gradient(135deg,#2196F3,#03A9F4);color:white;}
+.btn-settings{background:linear-gradient(135deg,#9C27B0,#E040FB);color:white;}
+.btn-back{background:linear-gradient(135deg,#607D8B,#90A4AE);color:white;width:auto;padding:10px 24px;font-size:1rem;}
+.btn-green{background:linear-gradient(135deg,#4CAF50,#8BC34A);color:white;}
+.btn-orange{background:linear-gradient(135deg,#FF6B35,#FF9800);color:white;}
+.btn-icon{font-size:1.3rem;}
+
+.level-card{background:white;border-radius:22px;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer;border:3px solid transparent;transition:all .2s;box-shadow:0 4px 12px rgba(0,0,0,0.1);}
+.level-card:hover,.level-card:active{transform:scale(1.03);border-color:#4CAF50;}
+.level-animal{font-size:2.4rem;}
+.level-info h3{font-family:'Fredoka One',cursive;font-size:1.1rem;color:#1B5E20;}
+.level-info p{font-size:0.75rem;color:#888;font-weight:700;}
+.level-badge{margin-left:auto;background:#E8F5E9;color:#2E7D32;padding:4px 12px;border-radius:20px;font-size:0.7rem;font-weight:800;}
+
+.game-top{width:100%;display:flex;justify-content:space-between;align-items:center;padding:50px 16px 10px;background:rgba(255,255,255,0.9);border-radius:0 0 24px 24px;z-index:20;position:relative;}
+.hud-box{text-align:center;}
+.hud-icon{font-size:1.3rem;}
+.hud-val{font-family:'Fredoka One',cursive;font-size:1.5rem;color:#1B5E20;line-height:1;}
+.hud-lbl{font-size:0.6rem;color:#888;font-weight:800;text-transform:uppercase;}
+.timer-ring{width:56px;height:56px;position:relative;}
+.timer-svg{width:56px;height:56px;transform:rotate(-90deg);}
+.timer-track{fill:none;stroke:#E0E0E0;stroke-width:5;}
+.timer-fill{fill:none;stroke:#FF6B35;stroke-width:5;stroke-linecap:round;stroke-dasharray:157;stroke-dashoffset:0;transition:stroke-dashoffset 1s linear,stroke .5s;}
+.timer-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Fredoka One',cursive;font-size:1.1rem;color:#333;}
+
+.question-bubble{background:rgba(255,255,255,0.95);border-radius:18px;padding:12px 16px;margin:10px 14px;text-align:center;z-index:10;position:relative;box-shadow:0 4px 16px rgba(0,0,0,0.1);}
+.question-text{font-family:'Fredoka One',cursive;font-size:clamp(1rem,3.5vw,1.2rem);color:#333;}
+.speaker-btn{background:linear-gradient(135deg,#FF6B35,#FF9800);border:none;border-radius:50%;width:40px;height:40px;font-size:1.2rem;cursor:pointer;margin-left:8px;vertical-align:middle;box-shadow:0 4px 8px rgba(255,107,53,0.4);transition:transform .15s;}
+.speaker-btn:active{transform:scale(0.9);}
+
+.animal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:8px 14px;z-index:10;width:100%;}
+.animal-tile{background:white;border-radius:22px;padding:14px 8px;text-align:center;cursor:pointer;border:4px solid transparent;box-shadow:0 5px 14px rgba(0,0,0,0.12);transition:transform .15s,box-shadow .15s;position:relative;overflow:hidden;}
+.animal-tile::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.8),transparent);border-radius:18px;}
+.animal-tile:active{transform:scale(0.94);}
+.animal-tile.correct{background:#C8E6C9;border-color:#4CAF50;animation:pop .4s;}
+.animal-tile.wrong{background:#FFCDD2;border-color:#F44336;animation:shk .4s;}
+.animal-tile.disabled{pointer-events:none;}
+.tile-emoji{font-size:clamp(2.6rem,9vw,4rem);display:block;line-height:1.1;}
+.tile-name{font-family:'Fredoka One',cursive;font-size:clamp(0.85rem,2.5vw,1rem);color:#333;margin-top:4px;}
+
+.ground{position:absolute;bottom:0;width:100%;height:70px;background:linear-gradient(180deg,#66BB6A,#388E3C);z-index:5;border-radius:36px 36px 0 0;}
+.flowers{position:absolute;bottom:52px;width:100%;z-index:6;display:flex;justify-content:space-around;font-size:1.6rem;}
+
+@keyframes pop{0%{transform:scale(1)}50%{transform:scale(1.1)}100%{transform:scale(1)}}
+@keyframes shk{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+@keyframes bounceIn{0%{transform:scale(0);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+
+.toast{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);background:rgba(0,0,0,0.85);color:white;padding:14px 28px;border-radius:50px;font-family:'Fredoka One',cursive;font-size:1.4rem;z-index:100;transition:transform .2s;pointer-events:none;text-align:center;}
+.toast.show{transform:translate(-50%,-50%) scale(1);}
+.toast.correct-toast{background:linear-gradient(135deg,#4CAF50,#8BC34A);}
+.toast.wrong-toast{background:linear-gradient(135deg,#F44336,#FF5722);}
+
+.howto-step{display:flex;align-items:center;gap:12px;background:#F9FBE7;border-radius:16px;padding:12px 14px;margin-bottom:10px;}
+.howto-num{background:#4CAF50;color:white;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Fredoka One',cursive;font-size:1.1rem;flex-shrink:0;}
+.howto-text{font-weight:700;color:#333;font-size:0.9rem;}
+
+.result-grade{font-family:'Fredoka One',cursive;font-size:4.5rem;line-height:1;background:linear-gradient(135deg,#FF6B35,#FF9800);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.result-stat{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:2px dashed #E0E0E0;}
+.result-stat:last-child{border-bottom:none;}
+.stat-label{font-weight:700;color:#888;font-size:0.85rem;}
+.stat-val{font-family:'Fredoka One',cursive;font-size:1.3rem;color:#1B5E20;}
+.stars-big{font-size:2.2rem;letter-spacing:6px;margin:8px 0;}
+
+.sound-card{background:white;border-radius:20px;padding:16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;box-shadow:0 4px 12px rgba(0,0,0,0.1);}
+.s-emoji{font-size:2.6rem;}
+.s-info h3{font-family:'Fredoka One',cursive;font-size:1rem;color:#1B5E20;}
+.s-info p{font-size:0.75rem;color:#888;font-weight:700;}
+.s-play{background:linear-gradient(135deg,#FF6B35,#FF9800);border:none;border-radius:50%;width:40px;height:40px;font-size:1.2rem;cursor:pointer;margin-left:auto;flex-shrink:0;box-shadow:0 4px 8px rgba(255,107,53,0.35);transition:transform .15s;}
+.s-play:active{transform:scale(0.9);}
+
+.sdg-footer{position:absolute;bottom:10px;left:0;right:0;text-align:center;z-index:20;}
+.sdg-pill{display:inline-block;background:rgba(255,255,255,0.85);border-radius:30px;padding:4px 14px;font-size:0.65rem;font-weight:800;color:#1B5E20;}
+
+.confetti{position:fixed;pointer-events:none;z-index:200;}
+.cp{position:fixed;width:10px;height:10px;border-radius:2px;animation:fall 2s ease-in forwards;}
+@keyframes fall{0%{transform:translateY(-10px) rotate(0);opacity:1}100%{transform:translateY(100vh) rotate(720deg);opacity:0}}
+
+.scroll-area{overflow-y:auto;max-height:55vh;width:100%;padding:0 4px;}
+.scroll-area::-webkit-scrollbar{width:5px;}
+.scroll-area::-webkit-scrollbar-track{background:transparent;}
+.scroll-area::-webkit-scrollbar-thumb{background:#C8E6C9;border-radius:3px;}
+</style>
+
+<!-- ==================== JAVASCRIPT ==================== -->
+<script>
+// ======================== DATA ========================
+const ANIMALS = [
+  {id:'dog',   emoji:'🐶', name:'Dog',     sound:'Woof! Woof!',    freq:440, type:'sawtooth', habitat:'Domestic',  fun:'Dogs are called man\'s best friend!'},
+  {id:'cat',   emoji:'🐱', name:'Cat',     sound:'Meow!',          freq:660, type:'sine',     habitat:'Domestic',  fun:'Cats sleep up to 16 hours a day!'},
+  {id:'cow',   emoji:'🐮', name:'Cow',     sound:'Moo!',           freq:200, type:'sawtooth', habitat:'Farm',      fun:'Cows have best friends they hang out with!'},
+  {id:'pig',   emoji:'🐷', name:'Pig',     sound:'Oink! Oink!',    freq:350, type:'square',   habitat:'Farm',      fun:'Pigs are very intelligent animals!'},
+  {id:'lion',  emoji:'🦁', name:'Lion',    sound:'Roar!',          freq:150, type:'sawtooth', habitat:'Savanna',   fun:'A lion\'s roar can be heard 8km away!'},
+  {id:'duck',  emoji:'🦆', name:'Duck',    sound:'Quack! Quack!',  freq:420, type:'sine',     habitat:'Pond',      fun:'Ducks waterproof their feathers!'},
+  {id:'frog',  emoji:'🐸', name:'Frog',    sound:'Ribbit! Ribbit!',freq:300, type:'square',   habitat:'Wetland',   fun:'Frogs can jump 20x their own body length!'},
+  {id:'chicken',emoji:'🐔',name:'Chicken', sound:'Cluck! Cluck!',  freq:500, type:'sawtooth', habitat:'Farm',      fun:'Chickens can recognize over 100 faces!'},
+  {id:'elephant',emoji:'🐘',name:'Elephant',sound:'Trumpet!',     freq:100, type:'sawtooth', habitat:'Savanna',   fun:'Elephants never forget!'},
+  {id:'monkey', emoji:'🐒',name:'Monkey',  sound:'Ooh-Ooh! Aah!', freq:380, type:'sine',     habitat:'Rainforest',fun:'Monkeys use tools like rocks to open nuts!'},
+  {id:'sheep',  emoji:'🐑',name:'Sheep',   sound:'Baa! Baa!',      freq:280, type:'sine',     habitat:'Farm',      fun:'Sheep have almost 360° vision!'},
+  {id:'horse',  emoji:'🐴',name:'Horse',   sound:'Neigh!',         freq:310, type:'sawtooth', habitat:'Farm',      fun:'Horses can sleep both lying down and standing!'},
+];
+
+const LEVELS = {
+  easy:   {time:30, points:10, label:'Easy'},
+  medium: {time:20, points:15, label:'Advanced'},
+  expert: {time:15, points:20, label:'Expert'},
+};
+
+let gameState = {
+  level:'easy', score:0, tapped:0, correct:0, wrong:0,
+  totalRounds:8, currentRound:0,
+  timeLeft:30, maxTime:30,
+  timerInterval:null, answered:false,
+  currentAnswer:null, queue:[],
+};
+
+// ======================== AUDIO CTX ========================
+let audioCtx = null;
+function getAudio(){
+  if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+// ======================== BACKGROUND MUSIC ========================
+let bgMusicNodes = null;
+let bgMusicPlaying = false;
+let bgMasterGain = null;
+let bgVolume = 0.4;
+
+// Cheerful pentatonic melody notes (C5 major pentatonic: C D E G A)
+const BG_MELODY = [
+  523.25,659.25,783.99,659.25,523.25,392.00,
+  523.25,783.99,880.00,783.99,659.25,523.25,
+  392.00,523.25,659.25,523.25,392.00,329.63,
+  392.00,659.25,523.25,440.00,523.25,659.25,
+];
+const NOTE_DUR = 0.28; // seconds per note
+let bgSchedulerTimer = null;
+let bgNoteIdx = 0;
+
+function startBGMusic(){
+  if(bgMusicPlaying) return;
+  bgMusicPlaying = true;
+  document.getElementById('music-pill').style.display = 'flex';
+  document.getElementById('music-btn').textContent = '⏸';
+  scheduleBGNotes();
+  animateMusicNote();
+}
+
+function scheduleBGNotes(){
+  const ctx = getAudio();
+  if(!bgMasterGain){
+    bgMasterGain = ctx.createGain();
+    bgMasterGain.gain.value = bgVolume * 0.18;
+    bgMasterGain.connect(ctx.destination);
+  }
+
+  function scheduleNext(){
+    if(!bgMusicPlaying) return;
+    const ctx = getAudio();
+    const freq = BG_MELODY[bgNoteIdx % BG_MELODY.length];
+    bgNoteIdx++;
+
+    // Soft sine melody
+    const osc = ctx.createOscillator();
+    const noteGain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    osc.connect(noteGain);
+    noteGain.connect(bgMasterGain);
+
+    const t = ctx.currentTime;
+    noteGain.gain.setValueAtTime(0, t);
+    noteGain.gain.linearRampToValueAtTime(1, t + 0.04);
+    noteGain.gain.setValueAtTime(1, t + NOTE_DUR * 0.6);
+    noteGain.gain.linearRampToValueAtTime(0, t + NOTE_DUR);
+
+    osc.start(t);
+    osc.stop(t + NOTE_DUR + 0.01);
+
+    // Add a quiet low bass pad every 4 notes
+    if(bgNoteIdx % 4 === 0){
+      const bass = ctx.createOscillator();
+      const bassGain = ctx.createGain();
+      bass.type = 'triangle';
+      bass.frequency.value = freq / 2;
+      bass.connect(bassGain);
+      bassGain.connect(bgMasterGain);
+      bassGain.gain.setValueAtTime(0.4, t);
+      bassGain.gain.linearRampToValueAtTime(0, t + NOTE_DUR * 2);
+      bass.start(t);
+      bass.stop(t + NOTE_DUR * 2);
+    }
+
+    bgSchedulerTimer = setTimeout(scheduleNext, NOTE_DUR * 1000 - 20);
+  }
+
+  scheduleNext();
+}
+
+function stopBGMusic(){
+  bgMusicPlaying = false;
+  if(bgSchedulerTimer) clearTimeout(bgSchedulerTimer);
+  if(bgMasterGain){
+    try{
+      const ctx = getAudio();
+      bgMasterGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.3);
+      setTimeout(()=>{
+        try{bgMasterGain.disconnect();}catch(e){}
+        bgMasterGain = null;
+      },400);
+    }catch(e){ bgMasterGain=null; }
+  }
+  stopMusicNoteAnim();
+}
+
+function toggleBGMusic(){
+  if(bgMusicPlaying){
+    stopBGMusic();
+    document.getElementById('music-btn').textContent = '▶';
+  } else {
+    startBGMusic();
+    document.getElementById('music-btn').textContent = '⏸';
+  }
+}
+
+function setBGVolume(val){
+  bgVolume = val / 100;
+  if(bgMasterGain){
+    const ctx = getAudio();
+    bgMasterGain.gain.setTargetAtTime(bgVolume * 0.18, ctx.currentTime, 0.1);
+  }
+}
+
+let noteAnimFrame = null;
+let noteAnimAngle = 0;
+function animateMusicNote(){
+  const el = document.getElementById('music-note');
+  const notes = ['🎵','🎶','🎼','🎵'];
+  let i = 0;
+  function tick(){
+    if(!bgMusicPlaying){ el.textContent = '🎵'; return; }
+    el.textContent = notes[i % notes.length];
+    i++;
+    noteAnimFrame = setTimeout(tick, 600);
+  }
+  tick();
+}
+function stopMusicNoteAnim(){
+  if(noteAnimFrame) clearTimeout(noteAnimFrame);
+  const el = document.getElementById('music-note');
+  if(el) el.textContent = '🎵';
+}
+
+// ======================== ANIMAL SOUNDS ========================
+function playTone(freq,type,dur,vol=0.3,delay=0){
+  try{
+    const ctx = getAudio();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type=type; osc.frequency.value=freq;
+    osc.start(ctx.currentTime+delay);
+    gain.gain.setValueAtTime(vol, ctx.currentTime+delay);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+delay+dur);
+    osc.stop(ctx.currentTime+delay+dur+0.01);
+  }catch(e){}
+}
+
+function playAnimalSound(animal){
+  const {freq,type,id} = animal;
+  if(id==='dog'){playTone(freq,'sawtooth',.15,.35);playTone(freq*.9,'sawtooth',.2,.3,.22);}
+  else if(id==='cat'){playTone(freq,'sine',.5,.25);playTone(freq*1.05,'sine',.3,.2,.15);}
+  else if(id==='cow'){playTone(freq,'sawtooth',.7,.4);playTone(freq*.75,'sawtooth',.5,.3,.35);}
+  else if(id==='pig'){[0,.18,.36].forEach(d=>playTone(freq,'square',.12,.25,d));}
+  else if(id==='lion'){playTone(100,'sawtooth',.1,.5);playTone(120,'sawtooth',.9,.45,.15);}
+  else if(id==='duck'){[0,.15,.3].forEach(d=>playTone(freq,'sine',.12,.3,d));}
+  else if(id==='frog'){[0,.22,.44,.66,.88].forEach(d=>playTone(300,'square',.1,.25,d));}
+  else if(id==='chicken'){[0,.12,.24].forEach(d=>playTone(freq,'sawtooth',.1,.3,d));}
+  else if(id==='elephant'){playTone(100,'sawtooth',.15,.45);playTone(130,'sawtooth',.7,.4,.2);}
+  else if(id==='monkey'){[0,.2,.4,.6].forEach(d=>playTone(freq+Math.random()*100,'sine',.15,.25,d));}
+  else if(id==='sheep'){playTone(280,'sine',.5,.3);playTone(260,'sine',.4,.25,.25);}
+  else if(id==='horse'){playTone(310,'sawtooth',.12,.35);playTone(280,'sawtooth',.5,.3,.18);}
+  else{playTone(freq,type,.5,.3);}
+}
+
+// ======================== NAVIGATION ========================
+function goTo(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(id==='screen-sounds') buildSoundsList();
+  if(id==='screen-learn') buildLearnList();
+}
+function replaySound(){
+  if(gameState.currentAnswer) playAnimalSound(gameState.currentAnswer);
+}
+
+// ======================== GAME ========================
+function startGame(level){
+  clearInterval(gameState.timerInterval);
+  const cfg = LEVELS[level];
+  gameState = {...gameState, level, score:0, tapped:0, correct:0, wrong:0,
+    currentRound:0, totalRounds:8, timeLeft:cfg.time, maxTime:cfg.time,
+    timerInterval:null, answered:false, currentAnswer:null,
+    queue:shuffle([...ANIMALS]).slice(0,8)};
+  goTo('screen-game');
+  loadRound();
+}
+function restartGame(){goTo('screen-levelselect');}
+
+function loadRound(){
+  if(gameState.currentRound >= gameState.totalRounds){endGame();return;}
+  gameState.answered = false;
+  const correct = gameState.queue[gameState.currentRound];
+  gameState.currentAnswer = correct;
+  const wrongs = shuffle(ANIMALS.filter(a=>a.id!==correct.id)).slice(0,3);
+  const options = shuffle([correct,...wrongs]);
+
+  document.getElementById('question-text').textContent = `🔊 Which animal says "${correct.sound}"?`;
+  const grid = document.getElementById('animal-grid');
+  grid.innerHTML='';
+  options.forEach(a=>{
+    const tile = document.createElement('div');
+    tile.className='animal-tile';
+    tile.dataset.id=a.id;
+    tile.innerHTML=`<span class="tile-emoji">${a.emoji}</span><div class="tile-name">${a.name}</div>`;
+    tile.onclick=()=>handleTap(a,tile);
+    grid.appendChild(tile);
+  });
+
+  setTimeout(()=>playAnimalSound(correct),400);
+  startTimer();
+  updateHUD();
+}
+
+function handleTap(animal, tile){
+  if(gameState.answered) return;
+  gameState.answered = true;
+  clearInterval(gameState.timerInterval);
+  document.querySelectorAll('.animal-tile').forEach(t=>t.classList.add('disabled'));
+  const isCorrect = animal.id === gameState.currentAnswer.id;
+  gameState.tapped++;
+  if(isCorrect){
+    gameState.correct++;
+    gameState.score += LEVELS[gameState.level].points + Math.floor(gameState.timeLeft*0.5);
+    tile.classList.add('correct');
+    showToast('🎉 Correct! +'+LEVELS[gameState.level].points,'correct-toast');
+  } else {
+    gameState.wrong++;
+    tile.classList.add('wrong');
+    document.querySelectorAll('.animal-tile').forEach(t=>{
+      if(t.dataset.id===gameState.currentAnswer.id) t.classList.add('correct');
+    });
+    showToast('❌ Wrong! It was '+gameState.currentAnswer.name,'wrong-toast');
+  }
+  updateHUD();
+  setTimeout(()=>{
+    gameState.currentRound++;
+    loadRound();
+  },1400);
+}
+
+function startTimer(){
+  clearInterval(gameState.timerInterval);
+  const cfg = LEVELS[gameState.level];
+  gameState.timeLeft = cfg.time;
+  gameState.maxTime = cfg.time;
+  updateTimerUI();
+  gameState.timerInterval = setInterval(()=>{
+    gameState.timeLeft--;
+    updateTimerUI();
+    if(gameState.timeLeft<=0){
+      clearInterval(gameState.timerInterval);
+      if(!gameState.answered){
+        gameState.answered=true;
+        gameState.tapped++;
+        gameState.wrong++;
+        showToast('⏰ Time\'s up!','wrong-toast');
+        document.querySelectorAll('.animal-tile').forEach(t=>{
+          t.classList.add('disabled');
+          if(t.dataset.id===gameState.currentAnswer.id) t.classList.add('correct');
+        });
+        updateHUD();
+        setTimeout(()=>{gameState.currentRound++;loadRound();},1400);
+      }
+    }
+  },1000);
+}
+
+function updateTimerUI(){
+  const pct = gameState.timeLeft / gameState.maxTime;
+  const circ = 2*Math.PI*25;
+  const offset = circ*(1-pct);
+  const ring = document.getElementById('timer-ring');
+  ring.style.strokeDashoffset = offset;
+  ring.style.stroke = gameState.timeLeft<=5?'#F44336':gameState.timeLeft<=10?'#FF9800':'#FF6B35';
+  document.getElementById('hud-time').textContent = gameState.timeLeft;
+}
+function updateHUD(){
+  document.getElementById('hud-score').textContent = gameState.score;
+  document.getElementById('hud-tapped').textContent = gameState.tapped;
+}
+
+function endGame(){
+  clearInterval(gameState.timerInterval);
+  const acc = gameState.tapped>0?Math.round(gameState.correct/gameState.tapped*100):0;
+  const pct = gameState.correct/gameState.totalRounds;
+  let grade,emoji,title,stars;
+  if(pct>=0.9){grade='A+';emoji='🏆';title='OUTSTANDING!';stars='⭐⭐⭐';}
+  else if(pct>=0.8){grade='A';emoji='🎉';title='EXCELLENT!';stars='⭐⭐⭐';}
+  else if(pct>=0.7){grade='B+';emoji='😊';title='GREAT JOB!';stars='⭐⭐';}
+  else if(pct>=0.6){grade='B';emoji='👍';title='GOOD JOB!';stars='⭐⭐';}
+  else if(pct>=0.5){grade='C';emoji='🙂';title='KEEP TRYING!';stars='⭐';}
+  else{grade='D';emoji='💪';title='PRACTICE MORE!';stars='⭐';}
+
+  document.getElementById('result-emoji').textContent=emoji;
+  document.getElementById('result-title').textContent=title;
+  document.getElementById('result-grade').textContent=grade;
+  document.getElementById('result-stars').textContent=stars;
+  document.getElementById('res-score').textContent=gameState.score;
+  document.getElementById('res-tapped').textContent=gameState.correct+'/'+gameState.totalRounds;
+  document.getElementById('res-acc').textContent=acc+'%';
+  goTo('screen-results');
+  if(pct>=0.7) fireConfetti();
+}
+
+// ======================== SOUND LIST ========================
+function buildSoundsList(){
+  const el = document.getElementById('sounds-list');
+  el.innerHTML = ANIMALS.map(a=>`
+    <div class="sound-card">
+      <div class="s-emoji">${a.emoji}</div>
+      <div class="s-info"><h3>${a.name}</h3><p>"${a.sound}" · ${a.habitat}</p></div>
+      <button class="s-play" onclick="playAnimalSound(${JSON.stringify(a).replace(/"/g,'&quot;')})">🔊</button>
+    </div>
+  `).join('');
+}
+
+// ======================== LEARN LIST ========================
+function buildLearnList(){
+  const el = document.getElementById('learn-list');
+  el.innerHTML = ANIMALS.map(a=>`
+    <div class="sound-card" style="flex-direction:column;align-items:flex-start;gap:8px;">
+      <div style="display:flex;align-items:center;gap:10px;width:100%;">
+        <div class="s-emoji">${a.emoji}</div>
+        <div class="s-info" style="flex:1;"><h3>${a.name}</h3><p>🏠 ${a.habitat} · Sound: "${a.sound}"</p></div>
+        <button class="s-play" onclick="playAnimalSound(${JSON.stringify(a).replace(/"/g,'&quot;')})">🔊</button>
+      </div>
+      <div style="background:#F1F8E9;border-radius:10px;padding:8px 10px;width:100%;font-size:0.78rem;color:#33691E;font-weight:700;">💡 ${a.fun}</div>
+    </div>
+  `).join('');
+}
+
+// ======================== UTILS ========================
+function shuffle(arr){return [...arr].sort(()=>Math.random()-.5);}
+function showToast(msg,cls){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast '+cls+' show';
+  setTimeout(()=>t.className='toast',1300);
+}
+function fireConfetti(){
+  const colors=['#FF6B35','#4CAF50','#2196F3','#FF9800','#9C27B0','#FF5722','#FFD700'];
+  for(let i=0;i<50;i++){
+    setTimeout(()=>{
+      const cp=document.createElement('div');
+      cp.className='cp';
+      cp.style.cssText=`left:${Math.random()*100}vw;top:-10px;background:${colors[Math.floor(Math.random()*colors.length)]};transform:rotate(${Math.random()*360}deg);animation-duration:${1.5+Math.random()}s;`;
+      document.body.appendChild(cp);
+      setTimeout(()=>cp.remove(),2500);
+    },i*40);
+  }
+}
+</script>
+
+</body>
+</html>
 
