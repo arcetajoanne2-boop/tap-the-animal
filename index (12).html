@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Tap The Animal</title>
+<style>
+    body {
+        margin: 0;
+        font-family: 'Segoe UI', sans-serif;
+        background: linear-gradient(135deg, #74ebd5, #acb6e5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+    }
+
+    .game-container {
+        text-align: center;
+        background: white;
+        padding: 15px;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        width: 95vw;
+        max-width: 400px;
+    }
+
+    h1 {
+        margin-bottom: 10px;
+        color: #333;
+        font-size: 24px;
+    }
+
+    .instruction {
+        font-size: 16px;
+        margin-bottom: 10px;
+        color: #555;
+    }
+
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+
+    .animal {
+        font-size: 35px;
+        padding: 15px;
+        border-radius: 15px;
+        background: #f0f0f0;
+        cursor: pointer;
+        transition: transform 0.2s, background 0.3s;
+    }
+
+    .animal:active {
+        transform: scale(0.9);
+        background: #dff9fb;
+    }
+
+    .score {
+        margin-top: 10px;
+        font-size: 18px;
+    }
+
+    button {
+        margin-top: 10px;
+        padding: 10px;
+        border: none;
+        border-radius: 10px;
+        background: #6c5ce7;
+        color: white;
+        font-size: 14px;
+        width: 100%;
+    }
+</style>
+</head>
+<body>
+
+<div class="game-container">
+    <h1>🐾 Tap The Animal</h1>
+    <div class="instruction" id="instruction">Tap the 🐶</div>
+
+    <div class="grid" id="grid"></div>
+
+    <div class="score">Score: <span id="score">0</span></div>
+    <button onclick="startGame()">Restart</button>
+</div>
+
+<script>
+// BACKGROUND MUSIC
+const bgMusic = new Audio("https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3");
+bgMusic.loop = true;
+bgMusic.volume = 0.3;
+
+document.body.addEventListener("click", () => {
+    bgMusic.play().catch(()=>{});
+}, { once: true });
+
+const animals = [
+    {emoji:'🐶', sound:'https://actions.google.com/sounds/v1/animals/dog_bark.ogg'},
+    {emoji:'🐱', sound:'https://actions.google.com/sounds/v1/animals/cat_meow.ogg'},
+    {emoji:'🐰', sound:'https://actions.google.com/sounds/v1/animals/rabbit.ogg'},
+    {emoji:'🦊', sound:'https://actions.google.com/sounds/v1/animals/fox_scream.ogg'},
+    {emoji:'🐸', sound:'https://actions.google.com/sounds/v1/animals/frog.ogg'},
+    {emoji:'🐵', sound:'https://actions.google.com/sounds/v1/animals/monkey.ogg'},
+    {emoji:'🐼', sound:'https://actions.google.com/sounds/v1/animals/panda.ogg'},
+    {emoji:'🐷', sound:'https://actions.google.com/sounds/v1/animals/pig.ogg'},
+    {emoji:'🐯', sound:'https://actions.google.com/sounds/v1/animals/tiger.ogg'}
+];
+
+let target = null;
+let score = 0;
+
+function playSound(url) {
+    const audio = new Audio(url);
+    audio.play();
+}
+
+function startGame() {
+    score = 0;
+    document.getElementById('score').innerText = score;
+    nextRound();
+}
+
+function nextRound() {
+    const grid = document.getElementById('grid');
+    grid.innerHTML = '';
+
+    target = animals[Math.floor(Math.random() * animals.length)];
+    document.getElementById('instruction').innerText = "Tap the " + target.emoji;
+
+    playSound(target.sound);
+
+    let shuffled = [...animals].sort(() => Math.random() - 0.5);
+
+    shuffled.forEach(animal => {
+        const div = document.createElement('div');
+        div.className = 'animal';
+        div.innerText = animal.emoji;
+
+        div.onclick = () => {
+            if (animal.emoji === target.emoji) {
+                score++;
+                playSound(animal.sound);
+            } else {
+                playSound(animal.sound);
+            }
+            document.getElementById('score').innerText = score;
+            nextRound();
+        };
+
+        grid.appendChild(div);
+    });
+}
+
+startGame();
+</script>
+
+</body>
+</html>
